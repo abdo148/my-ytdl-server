@@ -4,31 +4,33 @@ from flask import Flask, request, jsonify
 # تهيئة تطبيق فلاسك
 app = Flask(__name__)
 
-# هذا هو الخيار الأفضل للأداء على الخوادم
+# ==================== التعديل الجديد هنا ====================
+# هذا بروكسي عام ومجاني مقدم من مشروع Piped (بديل آخر ليوتيوب)
+# وظيفته هي تمرير الطلبات إلى يوتيوب وتجنب الحظر
+PROXY_URL = "https://pipedproxy.kavin.rocks"
+
+# إعدادات yt-dlp لاستخدام البروكسي
 YDL_OPTIONS = {
     'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
     'quiet': True,
+    'proxy': PROXY_URL,  # <-- إضافة البروكسي هنا
+    'geo_bypass': False # <-- مهم لتجنب مشاكل أخرى مع البروكسي
 }
+# ========================================================
 
 @app.route('/api/info')
 def get_info():
-    # الحصول على رابط يوتيوب من الطلب
     video_url = request.args.get('url')
     if not video_url:
         return jsonify({"error": "الرجاء توفير رابط الفيديو عبر متغير 'url'"}), 400
 
     try:
-        # استخدام yt-dlp لاستخلاص المعلومات
         with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
             info = ydl.extract_info(video_url, download=False)
-            # تنظيف الرد لإعادته كـ JSON
             sanitized_info = ydl.sanitize_info(info)
             return jsonify(sanitized_info)
-
     except Exception as e:
-        # في حال حدوث أي خطأ
         return jsonify({"error": str(e)}), 500
 
-# هذا السطر ضروري لتشغيل التطبيق على Render
 if __name__ == "__main__":
     app.run()
